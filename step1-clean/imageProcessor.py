@@ -31,7 +31,7 @@ from db import session, SQLImage
 
 def process_image():
   '''
-    takes user input
+    takes user input, create thumbnail, and store in DB
   '''
 
   uploadsDirExists = os.path.isdir(os.getcwd() + '/uploads')

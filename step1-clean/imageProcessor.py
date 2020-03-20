@@ -11,7 +11,7 @@ Related scripts
 '''
 
 import pathlib
-from PIL import Image as pillowImage
+import PIL.Image
 from db import session
 from models import Images, Thumbnails
 import sys
@@ -69,7 +69,7 @@ def process_image():
       print('Thumbnail already exists')
       return
 
-    img = pillowImage.open(pathToImg)
+    img = PIL.Image.open(pathToImg)
     img.thumbnail(size)
     img.save(pathToOutput, "JPEG")
     print('Created: {0} of size{1}'.format(thumbnailImg, str(size)))

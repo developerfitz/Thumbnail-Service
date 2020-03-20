@@ -1,79 +1,107 @@
 '''
 By: Fitz
 Created: 11 March 2020
-Updated: 12 March 2020
-Total Time to Complete: 7-10
-- 3-3.5 hours  on 11 March 2020
-- 3-3.5 hours on 12 March 2020
-- 2-3 hours wasted on trying to learn deeper unrelated tasks
+Updated: 20 March 2020
 
 Image Processing Script
 Related scripts
 - db.py - database setup, config, connect
 - query.py - methods to query database
-
-
-Find and select image processing library for python
-- pillow or pgmagik
-
-Resources
-- https://opensource.com/article/19/3/python-image-manipulation-tools
-- https://pillow.readthedocs.io/en/stable/handbook/index.html
-- https://docs.python.org/3/library/os.html#os-file-dir
-- https://docs.python.org/3/library/sys.html
-- https://docs.sqlalchemy.org/en/13/orm/tutorial.html
-
+- models.py - class models for Tables in DB
 '''
 
-import os, sys
-from PIL import Image
-from db import session, SQLImage
+import pathlib
+from PIL import Image as pillowImage
+from db import session
+from models import Images, Thumbnails
+import sys
+
 
 def process_image():
   '''
     takes user input, create thumbnail, and store in DB
   '''
 
-  uploadsDirExists = os.path.isdir(os.getcwd() + '/uploads')
-  thumbnailsDirExists = os.path.isdir(os.getcwd() + '/thumbnails')
+  uploadsDirExists = pathlib.Path('./uploads').exists()
+  thumbnailsDirExists = pathlib.Path('./thumbnails').exists()
 
 
   if not uploadsDirExists:
-    os.mkdir(os.getcwd() + '/uploads')
+    pathlib.Path('./uploads').mkdir()
     print("Uploads folder did not exist but was created.")
-    print("Add images to Uploads folder and try again.")
+    print("Add images to the Uploads folder and try again.")
     return
   if not thumbnailsDirExists:
-    os.mkdir(os.getcwd() + '/thumbnails')
+    pathlib.Path('./thumbnails').mkdir()
     print("Thumbnails folder was created")
 
+  pics = list(pathlib.Path('./uploads').glob('*.*'))
 
   size = (128, 128)
-  userFileName = input ("Input JPEG image name (no extention required): )? \n")
-  imgToProcess = os.getcwd() + '/uploads/' + userFileName + '.jpg'
-  outputFile = os.getcwd() + '/thumbnails/' + userFileName + '.thumbnail.jpg'
+  userFileName = input("Input image name:  \n")
+  imgToProcess = 'noFile'
+  stem = 'noStem'
+  suffix = 'noSuffix'
+
+  for pic in pics:
+    if userFileName == pic.name:
+      imgToProcess = str(pic.name)
+      stem = str(pic.stem)
+      suffix = str(pic.suffix)
+    elif userFileName == pic.stem and pic.suffix:
+      imgToProcess = str(pic.name)
+      stem = str(pic.stem)
+      suffix = str(pic.suffix)
 
 
-  if not os.path.exists(imgToProcess):
-    print("Image not found")
+
+  pathToImg = str(pathlib.Path('./uploads/{0}'.format(imgToProcess)))
+
+  thumbnailImg = '{0}.thumbnail{1}'.format(stem,suffix)
+  pathToOutput = str(pathlib.Path('./thumbnails/{0}'.format(thumbnailImg)))
+
+
+
+  try:
+    inThumbnails = pathlib.Path(pathToOutput).exists()
+
+    if inThumbnails:
+      print('Thumbnail already exists')
+      return
+
+    img = pillowImage.open(pathToImg)
+    img.thumbnail(size)
+    img.save(pathToOutput, "JPEG")
+    print('Created: {0} of size{1}'.format(thumbnailImg, str(size)))
+
+  except FileNotFoundError:
+    print('Oops there was an error.')
+    print("File not found.")
     return
 
-  if os.path.exists(outputFile):
-    print("Thumbnail already Exits")
+  except OSError:
+    print('Oops there was an error.')
+    print('Not an image file. Try again.')
     return
-  else:
-    print("Preparing to process Image")
 
+  except:
+    print('Unexpected error:', sys.exc_info()[0])
+    print('Check your configuration and try again.')
+    return
 
-  img = Image.open(imgToProcess)
-  img.thumbnail(size)
-  img.save(outputFile, "JPEG")
-  print('Image Processed, thumbnail' + str(size))
+  originalImage = Images(
+    filename=imgToProcess,
+    thumbnailImg=thumbnailImg,
+    thumbnailPath=pathToOutput,
+    isThumbnail=False)
 
+  processedImage = Thumbnails(
+    filename=thumbnailImg,
+    original=imgToProcess,
+    originalPath=pathToImg,
+    isThumbnail=True)
 
-  originalImage = SQLImage(filename=imgToProcess, isThumbnail='False')
-  thumbnailImage = SQLImage(filename=outputFile, isThumbnail='True')
-  session.add_all([originalImage, thumbnailImage])
+  session.add_all([originalImage, processedImage])
   session.commit()
 
 

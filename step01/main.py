@@ -1,6 +1,6 @@
 import boto3
 import json
-import os
+from pathlib import PurePath
 from io import BytesIO
 from PIL import Image
 from urllib.parse import unquote_plus
@@ -42,6 +42,8 @@ class S3Message:
     _id = message['MessageId']
     body = json.loads(message['Body'])
     # IMPLEMENT
+    # gen_message_from_response cleans up the response to only
+    # provide a message at a time
     key = body['Records'][0]['s3']['object']['key']
     receipt_handle = json.dumps(message['ReceiptHandle'])
 
@@ -53,7 +55,7 @@ def gen_messages_from_response(response):
   This function parses a response from AWS ReceiveMessages and returns
   a generator that yields one message at a time for each message in the response.
   '''
-
+  # set MaxNumberOfMessages=1 to insure only one message is recieved
   raw_messages = response.get('Messages', [])
   for raw_message in raw_messages:
     yield S3Message.parse(raw_message)
@@ -79,15 +81,15 @@ def create_thumbnail_key(key):
   based on the key of the original image.
   '''
 
-# EXAMPLE - feel free to use this or create your own
-# path, filename = os.path.split(key)
-# file, ext = os.path.splitext(filename)
-# return os.path.join(OUTPUT_FOLDER, file + '.thumbnail' + ext)
+  key_path = PurePath(key)
+  file_stem = key_path.stem
+  file_ext = key_path.suffix
+  return '{}/{}.thumbnail{}'.format(OUTPUT_FOLDER, file_stem, file_ext)
 
 
 def main():
   print('Waiting for Messages...')
-
+  #TODO: should this always be True? does it ever stop?
   while True:
     response = sqs.receive_message(
       QueueUrl=QUEUE_URL,
@@ -103,6 +105,7 @@ def main():
         )
 
         print(f'Creating Thumbnail for {message._id}')
+        #TODO: does this need to be closed?
         stream = get_object_response['Body'].read()
         thumbnail_stream = create_thumbnail(stream)
 

@@ -102,6 +102,8 @@ def main():
       try:
         get_object_response = s3.get_object(
           # IMPLEMENT
+          Bucket=BUCKET_NAME,
+          Key=message.key
         )
 
         print(f'Creating Thumbnail for {message._id}')
@@ -113,11 +115,16 @@ def main():
         thumbnail_key = create_thumbnail_key(message.key)
         s3.put_object(
           # IMPLEMENT
+          Bucket=BUCKET_NAME,
+          Key=thumbnail_key,
+          Body=thumbnail_stream
         )
 
         print(f'Deleting Message {message._id}')
         sqs.delete_message(
           # IMPLEMENT
+          QueueUrl=QUEUE_URL,
+          ReceiptHandle=message.receipt_handle
         )
 
       except Exception as e:

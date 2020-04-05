@@ -30,20 +30,13 @@ class S3Message:
     print(key)
 
   @classmethod
-  # decorator; bascially a wrapper function or High order function
-  # cls is the class itself
   def parse(cls, message):
     '''
     This class method parses the raw message from SQS in JSON form and
     returns an instance of S3Message.
-
-    Needs to be Implemented
     '''
     _id = message['MessageId']
     body = json.loads(message['Body'])
-    # IMPLEMENT
-    # gen_message_from_response cleans up the response to only
-    # provide a message at a time
     key = body['Records'][0]['s3']['object']['key']
     receipt_handle = json.dumps(message['ReceiptHandle'])
 
@@ -54,8 +47,10 @@ def gen_messages_from_response(response):
   '''
   This function parses a response from AWS ReceiveMessages and returns
   a generator that yields one message at a time for each message in the response.
+
+  Gets only one message: MaxNumberOfMessages = 1
+  Long Polling: WaitTimeSeconds = 2
   '''
-  # set MaxNumberOfMessages=1 to insure only one message is recieved
   raw_messages = response.get('Messages', [])
   for raw_message in raw_messages:
     yield S3Message.parse(raw_message)
@@ -101,7 +96,6 @@ def main():
     for message in messages:
       try:
         get_object_response = s3.get_object(
-          # IMPLEMENT
           Bucket=BUCKET_NAME,
           Key=message.key
         )
@@ -114,7 +108,6 @@ def main():
         print(f'Uploading Thumbnail for {message._id}')
         thumbnail_key = create_thumbnail_key(message.key)
         s3.put_object(
-          # IMPLEMENT
           Bucket=BUCKET_NAME,
           Key=thumbnail_key,
           Body=thumbnail_stream
@@ -122,7 +115,6 @@ def main():
 
         print(f'Deleting Message {message._id}')
         sqs.delete_message(
-          # IMPLEMENT
           QueueUrl=QUEUE_URL,
           ReceiptHandle=message.receipt_handle
         )

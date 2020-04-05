@@ -38,7 +38,7 @@ class S3Message:
     _id = message['MessageId']
     body = json.loads(message['Body'])
     key = body['Records'][0]['s3']['object']['key']
-    receipt_handle = json.dumps(message['ReceiptHandle'])
+    receipt_handle = message['ReceiptHandle']
 
     return cls(_id, key, receipt_handle)
 
@@ -132,6 +132,10 @@ def main():
         image can be kept in the queue and processed later when the code is 
         updated to fix the bug.
         '''
+        # raise error_class(parsed_response, operation_name)
+        # botocore.errorfactory.ReceiptHandleIsInvalid: An error occurred
+        # (ReceiptHandleIsInvalid) when calling the DeleteMessage operation:
+        # The input receipt handle is invalid.
         raise e
 
 

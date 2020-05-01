@@ -4,6 +4,7 @@ from pathlib import PurePath
 from io import BytesIO
 from PIL import Image
 from urllib.parse import unquote_plus
+from botocore.exceptions import ClientError
 
 BUCKET_NAME = 'gg-photo-bucket'
 OUTPUT_FOLDER = 'thumbnails'
@@ -34,10 +35,14 @@ class S3Message:
     '''
     This class method parses the raw message from SQS in JSON form and
     returns an instance of S3Message.
+
+    unquote_plus used to replace "+" with spaces from files uploaded
     '''
     _id = message['MessageId']
     body = json.loads(message['Body'])
-    key = body['Records'][0]['s3']['object']['key']
+    # assumes only on record
+    record = body['Records'].pop()
+    key = unquote_plus(record['s3']['object']['key'])
     receipt_handle = message['ReceiptHandle']
 
     return cls(_id, key, receipt_handle)
@@ -65,7 +70,7 @@ def create_thumbnail(input_stream, size=(128, 128)):
   output_stream = BytesIO()
   image = Image.open(BytesIO(input_stream))
   image.thumbnail(size)
-  image.save(output_stream, "JPEG")
+  image.save(output_stream, image.format)
   output_stream.seek(0)
   return output_stream
 
@@ -84,7 +89,6 @@ def create_thumbnail_key(key):
 
 def main():
   print('Waiting for Messages...')
-  #TODO: should this always be True? does it ever stop?
   while True:
     response = sqs.receive_message(
       QueueUrl=QUEUE_URL,
@@ -101,7 +105,6 @@ def main():
         )
 
         print(f'Creating Thumbnail for {message._id}')
-        #TODO: does this need to be closed?
         stream = get_object_response['Body'].read()
         thumbnail_stream = create_thumbnail(stream)
 
@@ -119,23 +122,51 @@ def main():
           ReceiptHandle=message.receipt_handle
         )
 
-      except Exception as e:
+      except ClientError as botoError:
+        '''        
+        ClientError
+        - boto3 errors (s3, sqs)
         '''
-        IMPLEMENT - this should be updated to only catch exceptions that 
-        are expected and print appropriate error messages. It is meant to 
-        prevent SQS messages from being deleted if the image was not properly
-        processed. Make sure to look for all failure scenarios, including those 
-        caused by boto3.
+        print(f'Botocore Error: {botoError}')
+        pass
+
+      except KeyError:
+        '''error from no output format'''
+        print(f'Output error: {KeyError}')
+        pass
+
+      except IOError as IOe:
+        '''  
+        - errors from file not found or opened
+        - errors if file not written
         
-        For example, if a failure occurs the error should be printed and the 
-        message should be left in the queue for later processing. This way the 
-        image can be kept in the queue and processed later when the code is 
-        updated to fix the bug.
+        Note: most errors from an image file or supported image file
         '''
-        # raise error_class(parsed_response, operation_name)
-        # botocore.errorfactory.ReceiptHandleIsInvalid: An error occurred
-        # (ReceiptHandleIsInvalid) when calling the DeleteMessage operation:
-        # The input receipt handle is invalid.
+        print(f'IO Error: {IOe}')
+        print('Thumbnail not created.')
+        print(f'Deleting Message {message._id}')
+        # Deletes message to prevent further processing
+        sqs.delete_message(
+          QueueUrl=QUEUE_URL,
+          ReceiptHandle=message.receipt_handle
+        )
+        # Removes uploaded files not able to be processed
+        print(f'Removing file from bucket: {message.key}')
+        s3.delete_object(
+          Bucket=BUCKET_NAME,
+          Key=message.key
+        )
+        pass
+
+      except OSError as OSe:
+        '''errors from BytesIO'''
+        print(f'OS Error: {OSe}')
+        print('Thumnail not created.')
+        pass
+
+      except Exception as e:
+        '''errors not caught from above'''
+        print(f'Uncaught Exception: {e}')
         raise e
 
 

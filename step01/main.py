@@ -122,27 +122,25 @@ def main():
           ReceiptHandle=message.receipt_handle
         )
 
-      except ClientError as botoError:
+      except ClientError as boto_error:
         '''        
         ClientError
         - boto3 errors (s3, sqs)
         '''
-        print(f'Botocore Error: {botoError}')
-        pass
+        print(f'Botocore Error: {boto_error}')
 
       except KeyError:
         '''error from no output format'''
         print(f'Output error: {KeyError}')
-        pass
 
-      except IOError as IOe:
+      except IOError as e:
         '''  
         - errors from file not found or opened
         - errors if file not written
         
-        Note: most errors from an image file or supported image file
+        Note: most errors from an image file or unsupported image file
         '''
-        print(f'IO Error: {IOe}')
+        print(f'IO Error: {e}')
         print('Thumbnail not created.')
         print(f'Deleting Message {message._id}')
         # Deletes message to prevent further processing
@@ -156,13 +154,11 @@ def main():
           Bucket=BUCKET_NAME,
           Key=message.key
         )
-        pass
 
-      except OSError as OSe:
+      except OSError as e:
         '''errors from BytesIO'''
-        print(f'OS Error: {OSe}')
+        print(f'OS Error: {e}')
         print('Thumnail not created.')
-        pass
 
       except Exception as e:
         '''errors not caught from above'''

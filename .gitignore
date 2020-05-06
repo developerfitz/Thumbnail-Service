@@ -2,5 +2,7 @@
 Development_Roadmap.iml
 **/__pycache__/**
 
+test.py
 step1-raw/*
-gitstep1-clean/*
+step00/*
+

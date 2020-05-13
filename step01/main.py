@@ -5,6 +5,9 @@ from io import BytesIO
 from PIL import Image
 from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from models import Images, Thumbnails
+import db
 
 BUCKET_NAME = 'gg-photo-bucket'
 OUTPUT_FOLDER = 'thumbnails'
@@ -87,6 +90,30 @@ def create_thumbnail_key(key):
   return '{}/{}.thumbnail{}'.format(OUTPUT_FOLDER, file_stem, file_ext)
 
 
+def create_image_record(bucket, key):
+  '''
+  creates an Image object to store in DB
+  stores in Images table
+
+  :param bucket: S3 bucket to use
+  :param key: path to image in specified S3 bucket
+  :return: Images Object
+  '''
+  return Images(bucket=bucket, filename=PurePath(key).name,
+                key=key)
+
+def create_thumbnail_record(bucket, key):
+  '''
+  creates an object using thumbnail model to store in DB
+  stores in Thumbnails table
+
+  :param bucket: S3 bucket to use
+  :param key: path to thumbnail in specified S3 bucket
+  :return: Thumbnails Object
+  '''
+  return Thumbnails(bucket=bucket, filename=PurePath(key).name,
+                    key=key)
+
 def main():
   print('Waiting for Messages...')
   while True:
@@ -104,12 +131,29 @@ def main():
           Key=message.key
         )
 
+        # creates and adds image record to DB
+        image_for_database = create_image_record(BUCKET_NAME, message.key)
+        db.session.add(image_for_database)
+
         print(f'Creating Thumbnail for {message._id}')
         stream = get_object_response['Body'].read()
         thumbnail_stream = create_thumbnail(stream)
 
         print(f'Uploading Thumbnail for {message._id}')
         thumbnail_key = create_thumbnail_key(message.key)
+
+        # creates and adds thumbnail record to DB
+        thumbnail_for_database = create_thumbnail_record(BUCKET_NAME, thumbnail_key)
+        db.session.add(thumbnail_for_database)
+
+        # updates image and thumbnail records
+        # not ideal but works
+        image_for_database.thumbnail = thumbnail_for_database
+        image_for_database.thumbnail_key = thumbnail_for_database.key
+        thumbnail_for_database.original_key = image_for_database.key
+
+        db.session.commit()
+
         s3.put_object(
           Bucket=BUCKET_NAME,
           Key=thumbnail_key,
@@ -129,6 +173,14 @@ def main():
         '''
         print(f'Botocore Error: {boto_error}')
 
+      except DBAPIError as db_error:
+        '''error from DB API'''
+        print(f'DB API Error: {db_error.statement}')
+
+      except SQLAlchemyError as alchemy_error:
+        '''error from ORM'''
+        print(f'SQL Alchemy Error: {alchemy_error}')
+
       except KeyError:
         '''error from no output format'''
         print(f'Output error: {KeyError}')
@@ -143,11 +195,13 @@ def main():
         print(f'IO Error: {e}')
         print('Thumbnail not created.')
         print(f'Deleting Message {message._id}')
+
         # Deletes message to prevent further processing
         sqs.delete_message(
           QueueUrl=QUEUE_URL,
           ReceiptHandle=message.receipt_handle
         )
+
         # Removes uploaded files not able to be processed
         print(f'Removing file from bucket: {message.key}')
         s3.delete_object(

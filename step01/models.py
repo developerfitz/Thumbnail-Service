@@ -1,69 +1,67 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
-
-class Thumbnails(Base):
-  __tablename__ = 'thumbnails'
-
-  id = Column(Integer, primary_key=True)
-  filename = Column(String)
-
-  # path in S3 bucket
-  key = Column(String)
-
-  # foreign key for image
-  image_id = Column(Integer, ForeignKey('images.id'))
-
-  # one-to-one to images
-  image = relationship('Images', back_populates='images')
-
-
-  def __repr__(self):
-    return  '''
-            Thumbnails
-            <id={id}, 
-            filename='{filename}', 
-            key='{key}', 
-            image_id='{image_id}'>
-            '''.format(
-      id=self.id,
-      filename=self.filename,
-      key=self.key,
-      image_id=self.image_id
-    )
 
 
 class Images(Base):
   __tablename__ = 'images'
-
   id = Column(Integer, primary_key=True)
+  bucket = Column(String)
   filename = Column(String)
 
   # path in S3 bucket
   key = Column(String)
+  thumbnail_key = Column(String)
 
-  # one-to-one to thumbnails
-  thumbnail = relationship('Thumbanils', back_populates='thumbnails')
-
-
-  # foreign key for thumbnail
-  thumbnail_id = Column(Integer, ForeignKey('thumbnails.id'))
+  thumbnail_id = Column(Integer, ForeignKey('thumbnails_table.id'))
+  thumbnail = relationship('Thumbnails', uselist=False,
+                           back_populates='original')
 
   def __repr__(self):
     return  '''Images
-            <id={id}, 
+            <id={id},
+            bucket='{bucket}', 
             filename='{filename}',
             key='{key}',
-            thumbnail_id={thumbnail_id}>
+            thumbnail_key='{thumbnail_key}'>
             '''.format(
       id=self.id,
+      bucket=self.bucket,
       filename=self.filename,
       key=self.key,
-      thumbnail_id=self.thumbnail_id
+      thumbnail_key=self.thumbnail_key
     )
 
 
-# TODO: commit model only
-# refactor(DB): redesigned DB models
+class Thumbnails(Base):
+  __tablename__ = 'thumbnails_table'
+  id = Column(Integer, primary_key=True)
+  bucket = Column(String)
+  filename = Column(String)
+
+  # path in S3 bucket
+  key = Column(String)
+  original_key = Column(String)
+
+  original = relationship('Images', back_populates='thumbnail')
+
+
+  # respresentation of the Model that can be copied
+  def __repr__(self):
+    return  '''
+            Thumbnails
+            <id={id},
+            bucket='{bucket}', 
+            filename='{filename}', 
+            key='{key}', 
+            original_key='{original_key}'> 
+            '''.format(
+      id=self.id,
+      bucket=self.bucket,
+      filename=self.filename,
+      key=self.key,
+      original_key=self.original_key
+    )
+

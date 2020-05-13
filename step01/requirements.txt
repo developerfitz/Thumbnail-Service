@@ -1,3 +1,4 @@
 pillow
 boto3
 botocore
+sqlalchemy

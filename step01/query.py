@@ -2,15 +2,15 @@ from db import session
 from models import Images, Thumbnails
 
 
-def filterByName():
-  inputName = input('Input exact filename: ')
-  imageQuery = session.query(Images).filter_by(filename=inputName).one()
+def filter_by_name():
+  input_name = input('Input exact filename: ')
+  image_query = session.query(Images).filter_by(filename=input_name).one()
 
-  if not imageQuery:
+  if not image_query:
     print('Not found in DB.')
     print('Ensure filename is correct (including extension).')
   else:
-    print(imageQuery)
+    print(image_query)
 
 
-filterByName()
+filter_by_name()

@@ -8,60 +8,98 @@ from botocore.exceptions import ClientError
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from models import Images
 import db
+import SQSQuery
 
 BUCKET_NAME = 'gg-photo-bucket'
 OUTPUT_FOLDER = 'thumbnails'
-QUEUE_URL = 'https://queue.amazonaws.com/862347804731/thumbnail-uploads'
+# QUEUE_URL = 'https://queue.amazonaws.com/862347804731/thumbnail-uploads'
 
 session = boto3.Session(profile_name='thumbnail-service')
 s3 = session.client('s3')
-sqs = session.client('sqs')
+# sqs = session.client('sqs')
 
-class S3Message:
-  '''
-  This class encapsulates logic and data so that receiving messages and
-  processing images can be handled separately. This is sometimes referred
-  to as a Data Transfer Object (DTO).
-  '''
+# class S3Message:
+#   '''
+#   This class encapsulates logic and data so that receiving messages and
+#   processing images can be handled separately. This is sometimes referred
+#   to as a Data Transfer Object (DTO).
+#   '''
+#
+#   def __init__(self, _id, key, receipt_handle):
+#     '''
+#     The constructor for S3Message.
+#     '''
+#     self._id = _id
+#     self.key = key
+#     self.receipt_handle = receipt_handle
+#     print(key)
+#
+#   @classmethod
+#   def parse(cls, message):
+#     '''
+#     This class method parses the raw message from SQS in JSON form and
+#     returns an instance of S3Message.
+#
+#     unquote_plus used to replace "+" with spaces from files uploaded
+#     '''
+#     _id = message['MessageId']
+#     body = json.loads(message['Body'])
+#     # assumes only on record
+#     record = body['Records'].pop()
+#     key = unquote_plus(record['s3']['object']['key'])
+#     receipt_handle = message['ReceiptHandle']
+#
+#     return cls(_id, key, receipt_handle)
 
-  def __init__(self, _id, key, receipt_handle):
-    '''
-    The constructor for S3Message.
-    '''
-    self._id = _id
-    self.key = key
-    self.receipt_handle = receipt_handle
-    print(key)
+# class SQS:
+#   '''
+#   SQS context manager that processes a single incoming message
+#   deleting occurs only if no exceptions are raised when exiting
+#
+#   :param message: S3Message object to process
+#   :param queue_url:
+#   :return: SQS context manager object (enter + exit)
+#   '''
+#
+#   def __init__(self, message, queue_url):
+#     # TODO: something is wrong i'm redefining the S3Message inside of SQS
+#     self.queue_url = queue_url
+#     self.id = message._id
+#     self.key = message.key
+#     self.receipt_handle = message.receipt_handle
+#
+#   def delete_message(self):
+#     print(f'Deleting message {self.id}')
+#     sqs.delete_message(
+#       QueueUrl=self.queue_url,
+#       ReceiptHandle=self.receipt_handle
+#     )
+#     print('Message deleted.')
+#
+#   def __enter__(self):
+#     return self
+#
+#   def __exit__(self, type, value, traceback):
+#     if type:
+#       # can probably logo this and use monitor using alerts
+#       print('Error occured while processing SQS message: ')
+#       print(f'{value}')
+#     else:
+#       self.delete_message()
+#     return True
 
-  @classmethod
-  def parse(cls, message):
-    '''
-    This class method parses the raw message from SQS in JSON form and
-    returns an instance of S3Message.
 
-    unquote_plus used to replace "+" with spaces from files uploaded
-    '''
-    _id = message['MessageId']
-    body = json.loads(message['Body'])
-    # assumes only on record
-    record = body['Records'].pop()
-    key = unquote_plus(record['s3']['object']['key'])
-    receipt_handle = message['ReceiptHandle']
-
-    return cls(_id, key, receipt_handle)
-
-
-def gen_messages_from_response(response):
-  '''
-  This function parses a response from AWS ReceiveMessages and returns
-  a generator that yields one message at a time for each message in the response.
-
-  Gets only one message: MaxNumberOfMessages = 1
-  Long Polling: WaitTimeSeconds = 2
-  '''
-  raw_messages = response.get('Messages', [])
-  for raw_message in raw_messages:
-    yield S3Message.parse(raw_message)
+# def gen_messages_from_response(response):
+#   '''
+#   This function parses a response from AWS ReceiveMessages and returns
+#   a generator that yields one message at a time for each message in the response.
+#
+#   Gets only one message: MaxNumberOfMessages = 1
+#   Long Polling: WaitTimeSeconds = 2
+#   '''
+#   raw_messages = response.get('Messages', [])
+#   for raw_message in raw_messages:
+#     yield S3Message.parse(raw_message)
 
 
 def create_thumbnail(input_stream, size=(128, 128)):
@@ -112,9 +150,12 @@ def main():
       WaitTimeSeconds=2
     )
 
+    # returned genergator object from S3.parased(raw_message)
+    # as messages added gets next one
     messages = gen_messages_from_response(response)
     for message in messages:
       try:
+        with SQS(message, QUEUE_URL) as sqs_message:
         get_object_response = s3.get_object(
           Bucket=BUCKET_NAME,
           Key=message.key
@@ -141,11 +182,13 @@ def main():
           Body=thumbnail_stream
         )
 
-        print(f'Deleting Message {message._id}')
-        sqs.delete_message(
-          QueueUrl=QUEUE_URL,
-          ReceiptHandle=message.receipt_handle
-        )
+        # # TODO: if no errors delete message in __exit__ (finally)
+        # print(f'Deleting Message {message._id}')
+        # sqs.delete_message(
+        #   QueueUrl=QUEUE_URL,
+        #   ReceiptHandle=message.receipt_handle
+        # )
+
 
       except ClientError as boto_error:
         '''        

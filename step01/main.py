@@ -6,7 +6,7 @@ from PIL import Image
 from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
-from models import Images, Thumbnails
+from models import Images
 import db
 
 BUCKET_NAME = 'gg-photo-bucket'
@@ -102,17 +102,6 @@ def create_image_record(bucket, key):
   return Images(bucket=bucket, filename=PurePath(key).name,
                 key=key)
 
-def create_thumbnail_record(bucket, key):
-  '''
-  creates an object using thumbnail model to store in DB
-  stores in Thumbnails table
-
-  :param bucket: S3 bucket to use
-  :param key: path to thumbnail in specified S3 bucket
-  :return: Thumbnails Object
-  '''
-  return Thumbnails(bucket=bucket, filename=PurePath(key).name,
-                    key=key)
 
 def main():
   print('Waiting for Messages...')
@@ -131,10 +120,6 @@ def main():
           Key=message.key
         )
 
-        # creates and adds image record to DB
-        image_for_database = create_image_record(BUCKET_NAME, message.key)
-        db.session.add(image_for_database)
-
         print(f'Creating Thumbnail for {message._id}')
         stream = get_object_response['Body'].read()
         thumbnail_stream = create_thumbnail(stream)
@@ -142,16 +127,12 @@ def main():
         print(f'Uploading Thumbnail for {message._id}')
         thumbnail_key = create_thumbnail_key(message.key)
 
-        # creates and adds thumbnail record to DB
-        thumbnail_for_database = create_thumbnail_record(BUCKET_NAME, thumbnail_key)
-        db.session.add(thumbnail_for_database)
+        # creates and adds image record to DB
+        image_for_database = create_image_record(BUCKET_NAME, message.key)
+        db.session.add(image_for_database)
 
-        # updates image and thumbnail records
-        # not ideal but works
-        image_for_database.thumbnail = thumbnail_for_database
-        image_for_database.thumbnail_key = thumbnail_for_database.key
-        thumbnail_for_database.original_key = image_for_database.key
-
+        # updates image record with thumbnail key
+        image_for_database.thumbnail_key = thumbnail_key
         db.session.commit()
 
         s3.put_object(

@@ -1,8 +1,12 @@
 .idea/*
 Development_Roadmap.iml
+
 **/__pycache__/**
+*.db
 
 test.py
-step1-raw/*
-step00/*
 
+
+# ignore all challenge dirs (steps) except current
+step*/
+!step01/

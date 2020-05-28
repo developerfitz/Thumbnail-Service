@@ -69,16 +69,22 @@ def main():
   # setting up SQSQueue to process SQSMessage
   sqs_message = SQSQueue(QUEUE_URL, client=sqs)
   print('Waiting for Messages...')
-
   while True:
     try:
       with sqs_message.get() as message:
         if message:
-          get_object_response = s3.get_object(
-            Bucket=BUCKET_NAME,
-            Key=message.key
-          )
+          try:
+            get_object_response = s3.get_object(
+              Bucket=BUCKET_NAME,
+              Key=message.key
+            )
+          except ClientError as boto_error:
+            '''boto3 errors (s3, sqs)'''
+            print(f'Botocore Error: {boto_error}')
 
+          # exceptions caught by context manager
+          # messages not deleted
+          # TODO: implement DLQ for failed messages
           print(f'Creating Thumbnail for {message._id}')
           stream = get_object_response['Body'].read()
           thumbnail_stream = create_thumbnail(stream)
@@ -86,72 +92,37 @@ def main():
           print(f'Uploading Thumbnail for {message._id}')
           thumbnail_key = create_thumbnail_key(message.key)
 
-          # creates and adds image record to DB
-          image_for_database = create_image_record(BUCKET_NAME, message.key)
-          db.session.add(image_for_database)
+          try:
+            # creates and adds image record to DB
+            image_for_database = create_image_record(BUCKET_NAME, message.key)
+            db.session.add(image_for_database)
 
-          # updates image record with thumbnail key
-          image_for_database.thumbnail_key = thumbnail_key
-          db.session.commit()
+            # updates image record with thumbnail key
+            image_for_database.thumbnail_key = thumbnail_key
+            db.session.commit()
 
-          s3.put_object(
-            Bucket=BUCKET_NAME,
-            Key=thumbnail_key,
-            Body=thumbnail_stream
-          )
+          except DBAPIError as db_error:
+            '''error from DB API'''
+            print(f'DB API Error: {db_error.statement}')
+          except SQLAlchemyError as alchemy_error:
+            '''error from ORM'''
+            print(f'SQL Alchemy Error: {alchemy_error}')
 
-    except ClientError as boto_error:
-      '''
-        ClientError
-        - boto3 errors (s3, sqs)
-      '''
-      print(f'Botocore Error: {boto_error}')
 
-    except DBAPIError as db_error:
-      '''error from DB API'''
-      print(f'DB API Error: {db_error.statement}')
-
-    except SQLAlchemyError as alchemy_error:
-      '''error from ORM'''
-      print(f'SQL Alchemy Error: {alchemy_error}')
-
-    except KeyError:
-      '''error from no output format'''
-      print(f'Output error: {KeyError}')
-
-    except IOError as e:
-      '''
-        - errors from file not found or opened
-        - errors if file not written
-  
-        Note: most errors from an image file or unsupported image file
-      '''
-      print(f'IO Error: {e}')
-      print('Thumbnail not created.')
-      print(f'Deleting Message {message._id}')
-
-      # Deletes message to prevent further processing
-      sqs.delete_message(
-        QueueUrl=QUEUE_URL,
-        ReceiptHandle=message.receipt_handle
-      )
-
-      # Removes uploaded files not able to be processed
-      print(f'Removing file from bucket: {message.key}')
-      s3.delete_object(
-        Bucket=BUCKET_NAME,
-        Key=message.key
-      )
-
-    except OSError as e:
-      '''errors from BytesIO'''
-      print(f'OS Error: {e}')
-      print('Thumnail not created.')
+          try:
+            s3.put_object(
+              Bucket=BUCKET_NAME,
+              Key=thumbnail_key,
+              Body=thumbnail_stream
+            )
+          except ClientError as boto_error:
+            print(f'Botocore Error: {boto_error}')
 
     except Exception as e:
       '''errors not caught from above'''
       print(f'Uncaught Exception: {e}')
       raise e
+
 
 
 

@@ -22,7 +22,7 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/GenericError'
-  /users/images/:
+  /images/presigned-url:
     get:
       tags:
         - images
@@ -42,7 +42,7 @@ paths:
             type: string
       responses:
         '200':
-          $ref: '#/components/responses/200presignedUrl'
+          $ref: '#/components/responses/PresignedUrl'
         default:
           $ref: '#/components/responses/GenericError'
 
@@ -74,7 +74,7 @@ components:
         presigned_url:
           type: string
   responses:
-    200presignedUrl:
+    PresignedUrl:
       description: presigned url created successfully
       content:
         application/json:

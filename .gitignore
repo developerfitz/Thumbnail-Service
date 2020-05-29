@@ -1,6 +1,9 @@
 .idea/*
-Development_Roadmap.iml
+*.iml
 **/__pycache__/**
+*.db
 
-step1-raw/*
-gitstep1-clean/*
+# ignore all challenge dirs (steps) except current
+step*/
+!step02/
+q

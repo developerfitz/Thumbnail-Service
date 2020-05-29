@@ -22,14 +22,24 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/GenericError'
-  /users/presigned-url:
+  /users/images/:
     get:
       tags:
-        - presigned url
+        - images
       summary: returns a presigned url for user  to upload image
       parameters:
-        - $ref: '#/components/parameters/contentTypeParam'
-        - $ref: '#/components/parameters/filenameParam'
+        - in: query
+          name: filename
+          description: name of uploaded image
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: content-type
+          description: file MIME type
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           $ref: '#/components/responses/200presignedUrl'
@@ -76,18 +86,3 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-  parameters:
-    filenameParam:
-      in: query
-      name: x-amz-meta-filename
-      description: filename
-      required: true
-      schema:
-        type: string
-    contentTypeParam:
-      in: query
-      name: content-type
-      description: file MIME type
-      required: true
-      schema:
-        type: string

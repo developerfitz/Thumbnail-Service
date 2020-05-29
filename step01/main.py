@@ -67,7 +67,7 @@ def create_image_record(bucket, key):
 
 def main():
   # setting up SQSQueue to process SQSMessage
-  sqs_message = SQSQueue(QUEUE_URL, client=sqs)
+  sqs_message = SQSQueue(QUEUE_URL, session=session)
   print('Waiting for Messages...')
   while True:
     try:
@@ -82,15 +82,29 @@ def main():
             '''boto3 errors (s3, sqs)'''
             print(f'Botocore Error: {boto_error}')
 
-          # exceptions caught by context manager
-          # messages not deleted
-          # TODO: implement DLQ for failed messages
-          print(f'Creating Thumbnail for {message._id}')
-          stream = get_object_response['Body'].read()
-          thumbnail_stream = create_thumbnail(stream)
+          try:
+            print(f'Creating Thumbnail for {message._id}')
+            stream = get_object_response['Body'].read()
+            thumbnail_stream = create_thumbnail(stream)
 
-          print(f'Uploading Thumbnail for {message._id}')
-          thumbnail_key = create_thumbnail_key(message.key)
+            print(f'Uploading Thumbnail for {message._id}')
+            thumbnail_key = create_thumbnail_key(message.key)
+          except IOError as e:
+            '''
+              - errors from file not found or opened
+              - errors if file not written
+        
+              Note: most errors from an image file or unsupported image file
+            '''
+            print(f'IO Error: {e}')
+            print('Thumbnail not created.')
+          except OSError as e:
+            '''errors from BytesIO'''
+            print(f'OS Error: {e}')
+            print('Thumnail not created.')
+          except KeyError:
+            '''error from no output format'''
+            print(f'Output error: {KeyError}')
 
           try:
             # creates and adds image record to DB
@@ -107,7 +121,6 @@ def main():
           except SQLAlchemyError as alchemy_error:
             '''error from ORM'''
             print(f'SQL Alchemy Error: {alchemy_error}')
-
 
           try:
             s3.put_object(

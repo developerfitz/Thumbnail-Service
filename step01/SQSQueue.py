@@ -87,23 +87,6 @@ class SQSQueue:
       message = SQSMessage.parse(messages[0])
       try:
         yield message
-
-      except IOError as e:
-        '''
-          - errors from file not found or opened
-          - errors if file not written
-    
-          Note: most errors from an image file or unsupported image file
-        '''
-        print(f'IO Error: {e}')
-        print('Thumbnail not created.')
-      except OSError as e:
-        '''errors from BytesIO'''
-        print(f'OS Error: {e}')
-        print('Thumnail not created.')
-      except KeyError:
-        '''error from no output format'''
-        print(f'Output error: {KeyError}')
       except Exception as e:
         # Notify that an exception occured, raised be caught by outer Exceptions
         print(f'An error occured, see below.')

@@ -1,0 +1,88 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Thumbnail Service API
+  license:
+    name: MIT
+servers:
+  - url: http://lolcats.gg/v1/
+paths:
+  /users/me:
+    get:
+      tags:
+        - users
+      summary: Gets profile of current user
+      operationId: app.get_profile
+      responses:
+        '200':
+          description: User Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/GenericError'
+  /images/presigned-url:
+    get:
+      tags:
+        - images
+      summary: returns a presigned url for user  to upload image
+      parameters:
+        - in: query
+          name: filename
+          description: name of uploaded image
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: content-type
+          description: file MIME type
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/PresignedUrl'
+        default:
+          $ref: '#/components/responses/GenericError'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    PresignedUrl:
+      type: object
+      required:
+        - presigned_url
+      properties:
+        presigned_url:
+          type: string
+  responses:
+    PresignedUrl:
+      description: presigned url created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PresignedUrl'
+    GenericError:
+      description: unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

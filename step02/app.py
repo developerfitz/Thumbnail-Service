@@ -6,6 +6,10 @@ from openapi_core import create_spec
 from openapi_core.contrib.flask.decorators import FlaskOpenAPIViewDecorator
 import yaml
 
+# DB
+import db
+from models import Images
+
 # misc
 import uuid
 import pathlib
@@ -18,7 +22,7 @@ openapi = FlaskOpenAPIViewDecorator.from_spec(spec)
 path = pathlib.PurePath
 
 BUCKET_NAME = 'gg-photo-bucket'
-UPLOAD_FOLDER = '/images'
+UPLOAD_FOLDER = 'images/'
 AWS_PROFILE = 'thumbnail-service'
 
 session = boto3.Session(profile_name=AWS_PROFILE)
@@ -34,19 +38,21 @@ def get_profile():
     'id': 0
   })
 
-@app.route('/images/upload_url', endpoint='image.get_upload_url')
+@app.route('/images/upload_url', methods=['GET'])
 @openapi
 def get_upload_url():
     # query param
     filename = request.openapi.parameters.query['filename']
-    stem = path(filename).stem
     content_type = request.openapi.parameters.query['content-type']
+    # values used for S3 presigned-url
+    stem = path(filename).stem
     file_uuid = uuid.uuid4()
-    key = f'images/{file_uuid}'
+    key = UPLOAD_FOLDER + f'{file_uuid}'
 
-    key = f'images/{file_uuid}'
-
-    # TODO: upload uuid in database
+    # upload image in database
+    image_record = Images(bucket=BUCKET_NAME, filename=filename, key=key)
+    db.session.add(image_record)
+    db.session.commit()
 
     # params for s3 put_object method
     # tag + uuid
@@ -75,4 +81,4 @@ def get_upload_url():
 
 
 if __name__ == '__main__':
-  app.run(port=5000, debug=True)
+  app.run(port=5000)

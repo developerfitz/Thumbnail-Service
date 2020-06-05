@@ -4,4 +4,4 @@ botocore
 sqlalchemy
 flask
 openapi_core
-yaml
+pyyaml

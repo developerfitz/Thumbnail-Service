@@ -7,3 +7,4 @@
 # ignore all challenge dirs (steps) except current
 step*/
 !step02/
+sandbox/

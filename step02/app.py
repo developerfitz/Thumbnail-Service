@@ -22,7 +22,7 @@ openapi = FlaskOpenAPIViewDecorator.from_spec(spec)
 path = pathlib.PurePath
 
 BUCKET_NAME = 'gg-photo-bucket'
-UPLOAD_FOLDER = 'images/'
+UPLOAD_FOLDER = 'images'
 AWS_PROFILE = 'thumbnail-service'
 
 session = boto3.Session(profile_name=AWS_PROFILE)
@@ -41,43 +41,44 @@ def get_profile():
 @app.route('/images/upload_url', methods=['GET'])
 @openapi
 def get_upload_url():
-    # query param
-    filename = request.openapi.parameters.query['filename']
-    content_type = request.openapi.parameters.query['content-type']
-    # values used for S3 presigned-url
-    stem = path(filename).stem
-    file_uuid = uuid.uuid4()
-    key = UPLOAD_FOLDER + f'{file_uuid}'
+  # query param
+  filename = request.openapi.parameters.query['filename']
+  content_type = request.openapi.parameters.query['content-type']
+  # values used for S3 presigned-url
+  file_uuid = uuid.uuid4()
+  stem = path(filename).stem
+  key = path(UPLOAD_FOLDER, file_uuid)
 
+  try:
     # upload image in database
     image_record = Images(bucket=BUCKET_NAME, filename=filename, key=key)
     db.session.add(image_record)
     db.session.commit()
+  except DBAPIError as db_error:
+    print(f'DB API Error: {db_error.statement}')
+    raise
+  except SQLAlchemyError as alchemy_error:
+    print(f'SQL Alchemy Error: {alchemy_error}')
+    raise
 
-    # params for s3 put_object method
-    # tag + uuid
-    s3_params = {
-        'Bucket': f'{BUCKET_NAME}',
-        'Key': f'{key}',
-        'ContentType': content_type,
-        'Tagging': f'{stem}={file_uuid}'
-      }
-
-    url = s3.generate_presigned_url(
-      'put_object',
-      Params=s3_params,
-      HttpMethod="PUT",
-      ExpiresIn=2
-    )
-    
-    payload = {
-      'filename': stem,
-      'content-type': content_type,
-      'uuid': file_uuid,
-      'presigned_url': url,
-      f'{stem}': file_uuid
+  # params for s3 put_object method
+  # tag + uuid
+  s3_params = {
+      'Bucket': BUCKET_NAME,
+      'Key': f'{key}',
+      'ContentType': content_type,
+      'Tagging': f'{stem}={file_uuid}'
     }
-    return jsonify(payload)
+
+  url = s3.generate_presigned_url(
+    'put_object',
+    Params=s3_params,
+    HttpMethod="PUT",
+    ExpiresIn=2
+  )
+  
+  payload = {'presigned_url': url}
+  return jsonify(payload)
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ info:
   license:
     name: MIT
 servers:
-  - url: http://lolcats.gg/v1/
+  - url: http://127.0.0.1:5000
 paths:
   /users/me:
     get:
@@ -22,11 +22,12 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/GenericError'
-  /images/presigned-url:
+  /images/upload_url:
     get:
       tags:
         - images
-      summary: returns a presigned url for user  to upload image
+      summary: returns a presigned url for user to upload image
+      operationId: app.get_upload_url
       parameters:
         - in: query
           name: filename
@@ -45,7 +46,6 @@ paths:
           $ref: '#/components/responses/PresignedUrl'
         default:
           $ref: '#/components/responses/GenericError'
-
 components:
   schemas:
     User:
@@ -54,7 +54,7 @@ components:
         - id
       properties:
         id:
-          type: string
+          type: integer
     Error:
       type: object
       required:

@@ -1,0 +1,7 @@
+pillow
+boto3
+botocore
+sqlalchemy
+flask
+openapi_core
+pyyaml

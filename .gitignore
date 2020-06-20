@@ -3,8 +3,10 @@
 *venv*/
 **/__pycache__/**
 *.db
+**node_modules**
 
 # ignore all challenge dirs (steps) except current
 step*/
 !step02/
 sandbox/
+**software-engineering-bootcamp**

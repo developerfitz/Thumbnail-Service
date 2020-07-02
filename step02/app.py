@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request # web framework
+from flask import Flask, jsonify, request, send_file # web framework
 import boto3 # aws SDK
 
 # openAPI spec
@@ -28,8 +28,11 @@ AWS_PROFILE = 'thumbnail-service'
 session = boto3.Session(profile_name=AWS_PROFILE)
 s3 = session.client('s3')
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='./app-frontend/public', static_url_path='/static')
 
+@app.route('/')
+def serve_ui():
+  return send_file('./app-frontend/public/index.html')
 
 @app.route('/users/me', methods=['GET'])
 @openapi
@@ -45,13 +48,15 @@ def get_upload_url():
   filename = request.openapi.parameters.query['filename']
   content_type = request.openapi.parameters.query['content-type']
   # values used for S3 presigned-url
-  file_uuid = uuid.uuid4()
+  file_uuid = str(uuid.uuid4())
   stem = path(filename).stem
+  # key is a PurePosixPath object so be mindful it's not a string
   key = path(UPLOAD_FOLDER, file_uuid)
+  # key = f'{UPLOAD_FOLDER}/{file_uuid}'
 
   try:
     # upload image in database
-    image_record = Images(bucket=BUCKET_NAME, filename=filename, key=key)
+    image_record = Images(bucket=BUCKET_NAME, filename=filename, key=str(key))
     db.session.add(image_record)
     db.session.commit()
   except DBAPIError as db_error:
@@ -74,7 +79,7 @@ def get_upload_url():
     'put_object',
     Params=s3_params,
     HttpMethod="PUT",
-    ExpiresIn=2
+    ExpiresIn=10
   )
   
   payload = {'presigned_url': url}
@@ -82,4 +87,4 @@ def get_upload_url():
 
 
 if __name__ == '__main__':
-  app.run(port=5000)
+  app.run()

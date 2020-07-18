@@ -88,7 +88,7 @@ def process_message():
     )
   except ClientError as boto_error:
     '''boto3 errors (s3)'''
-    print(f'Botocore Error: {boto_error}')
+    application.logger.error(f'Botocore Error: {boto_error}')
 
   try:
     stream = get_object_response['Body'].read()
@@ -101,15 +101,18 @@ def process_message():
 
       Note: most errors from an image file or unsupported image file
     '''
-    print(f'IO Error: {e}')
-    print('Thumbnail not created.')
+    application.logger.error(f'IO Error: {e}')
+    application.logger.error('Thumbnail not created.')
+    raise e
   except OSError as e:
-    '''errors from BytesIO'''
-    print(f'OS Error: {e}')
-    print('Thumnail not created.')
+    '''system errors from BytesIO'''
+    application.logger.error(f'OS Error: {e}')
+    application.logger.error('Thumnail not created.')
+    raise e
   except KeyError:
-    '''error from no output format'''
-    print(f'Output error: {KeyError}')
+    '''error from no output format determined'''
+    application.logger.error(f'Output error: {KeyError}')
+    raise e
   
   try:
     s3.put_object(
@@ -118,7 +121,7 @@ def process_message():
       Body=thumbnail_stream
     )
   except ClientError as boto_error:
-    print(f'Botocore Error: {boto_error}')
+    application.logger.error(f'Botocore Error: {boto_error}')
 
   return Response('', status=200)
 

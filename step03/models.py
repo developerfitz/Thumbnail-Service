@@ -22,7 +22,7 @@ class User(db.Model):
     fullname = Column(String)
     first_name = Column(String)
     last_name = Column(String)
-    user_tier = Column(String)
+    user_tier = Column(Integer)
 
     def __repr__(self):
         return "User<{username}>".format(

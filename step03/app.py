@@ -12,14 +12,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db, compare_type=True)
 
-from models import User
+# from models import User
 
 
 BUCKET_NAME = 'gg-thumbnail-project'
 # OUTPUT_FOLDER = 'thumbnails'
 UPLOAD_FOLDER = 'images'
 AWS_PROFILE = 'thumbnail-service'
-# AWS_PROFILE = 'freefood89'
 LOCAL_USER = {
     'username': 'local',
     'fullname': 'lolcats lolz',
@@ -53,12 +52,12 @@ def init_local():
 @app.before_request
 def attach_current_user():
     if app.config['DEBUG']:
-        g.current_user = LOCAL_USERNAME
+        g.current_user = LOCAL_USER['username']
 
 
 @app.route('/users/me')
 def get_profile():
-    user = User.query.get(LOCAL_USERNAME)
+    user = User.query.get(LOCAL_USER['username'])
 
     return jsonify({
         'username': user.username,
@@ -84,4 +83,5 @@ def get_image_upload_url(filename):
 
 
 if __name__ == '__main__':
+    from models import User
     app.run(debug=True)

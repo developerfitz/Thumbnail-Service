@@ -12,7 +12,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db, compare_type=True)
 
-# from models import User
+from models import User
 
 
 BUCKET_NAME = 'gg-thumbnail-project'
@@ -83,5 +83,4 @@ def get_image_upload_url(filename):
 
 
 if __name__ == '__main__':
-    from models import User
     app.run(debug=True)

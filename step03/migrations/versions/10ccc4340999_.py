@@ -31,7 +31,17 @@ def convert_tier_to_level(tier):
         return -1
 
 def upgrade():
-    op.add_column('users', sa.Column('temp_tier', sa.Integer(), nullable=True))
+    try: 
+        op.add_column('users', 
+            sa.Column(
+                'temp_tier', 
+                sa.Integer(), 
+                nullable=True
+            )
+        )
+    except:
+        print('Unexpected migration error...')
+        raise
     
     connection = op.get_bind()
 

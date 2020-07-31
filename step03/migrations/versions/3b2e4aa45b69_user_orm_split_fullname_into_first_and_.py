@@ -18,8 +18,24 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('users', sa.Column('first_name', sa.String(), nullable=True))
-    op.add_column('users', sa.Column('last_name', sa.String(), nullable=True))
+    try:
+        op.add_column('users', 
+            sa.Column(
+                'first_name', 
+                sa.String(), 
+                nullable=True
+            )
+        )
+        op.add_column('users', 
+            sa.Column(
+                'last_name', 
+                sa.String(), 
+                nullable=True
+            )
+        )
+    except:
+        print('Unexpected migration error...')
+        raise
 
     connection = op.get_bind()
 

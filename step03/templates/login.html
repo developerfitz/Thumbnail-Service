@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Image.ly | Login</title>
+	<style>
+html {
+	height: 100%;
+	padding: 0;
+}
+
+body {
+	height: 100%;
+	display: grid;
+	place-items: center;
+}
+
+main {
+	width: 360px;
+	padding: 16px;
+	border: 1px black solid;
+}
+
+.login {
+	width: 100%;
+	height: 36px;
+}
+
+	</style>
+</head>
+<body>
+	<main>
+		<h2>Sign In</h2>
+		<p>Authenticate to use this sketchy app</p>
+		<button 
+			onclick="window.location.href='/auth/login'"
+			class="login"
+		>
+			Login with Github
+		</button>
+	</main>
+</body>
+</html>

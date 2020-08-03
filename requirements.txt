@@ -1,0 +1,13 @@
+pillow
+boto3
+botocore
+sqlalchemy
+requests
+flask
+flask_migrate
+flask_sqlalchemy
+openapi_core
+pyyaml
+auth
+require_authentication
+python-dotenv

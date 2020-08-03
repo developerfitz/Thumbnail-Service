@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Image.ly | Profile</title>
+	<style>
+html {
+	height: 100%;
+	padding: 0;
+}
+
+body {
+	display: grid;
+	height: 100%;
+	margin: 0;
+    grid-template-rows: auto 1fr auto;
+}
+
+header {
+	background-color: lightblue;
+	line-height: 56px;
+	width: 100%;
+	display: inline-flex;
+	justify-content: space-between;
+}
+
+main {
+	padding: 16px;
+}
+
+footer {
+	background-color: bisque;
+	padding: 16px;
+}
+
+.title {
+	margin-left: 16px;
+}
+
+.profile {
+	height: 36px;
+    width: 36px;
+    border-radius: 18px;
+    margin: 10px 16px;
+}
+
+	</style>
+</head>
+<body>
+	<header>
+		<span class="title">Image.ly</span>
+		<image class="profile" src="{{ profile_image_url }}"/>
+	</header>
+	<main>
+		<h2>Welcome {{ username }}</h2>
+	</main>
+	<footer>
+		Copyright lolcats inc
+	</footer>
+</body>
+</html>

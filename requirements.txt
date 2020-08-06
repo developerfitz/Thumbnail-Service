@@ -8,6 +8,4 @@ flask_migrate
 flask_sqlalchemy
 openapi_core
 pyyaml
-auth
-require_authentication
 python-dotenv

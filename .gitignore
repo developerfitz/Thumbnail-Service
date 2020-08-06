@@ -4,6 +4,8 @@
 **/__pycache__/**
 *.db
 **node_modules**
+.env
+.vscode
 
 # ignore all challenge dirs (steps) except current
 step*/

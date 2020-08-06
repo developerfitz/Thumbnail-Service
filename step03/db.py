@@ -12,7 +12,7 @@ class FakeDatabase:
 			'login': login,
 			'avatar_url': avatar_url,
 			'email': email,
-			'access_token': access_token,
+			'access_token': access_token
 		}
 
 

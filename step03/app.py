@@ -1,5 +1,6 @@
 from flask import Flask, g, url_for, redirect, abort, render_template
 import flask
+import logging
 import requests
 import os
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ import werkzeug
 
 app = Flask(__name__)
 app.register_blueprint(auth)
+app.logger.setLevel(logging.INFO)
 load_dotenv()
 
 SECRET_KEY = os.environ.get("SECRET_KEY")

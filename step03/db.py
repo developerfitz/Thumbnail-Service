@@ -1,3 +1,18 @@
+from flask import g
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+import models
+
+Base = models.Base
+
+engine = create_engine('sqlite+pysqlite:///imagely.db')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+# Session = sessionmaker(bind=engine)
+# session = Session()
+
+
+
 class FakeDatabase:
 	def __init__(self):
 		self._users_by_github_id = {}

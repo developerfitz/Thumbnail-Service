@@ -1,16 +1,38 @@
 from functools import wraps
 from flask import abort, session, g
 import requests
+from models import Profiles
 
 
 def require_authentication(func):
     @wraps(func)
     def decorator(*args, **kwargs):
+        g.logger.info('in require auth')
+        # g.logger.info(g.profile)
         if 'user_id' not in session:
             abort(403)
-
-        if not g.db.get_user(session['user_id']):
+        
+        # TODO: check if db has the user and abort if not
+        # if not g.db.get_user(session['user_id']):
+        # g.logger.info(session['user_id'])
+        # db = g.Session()
+        # user_id is the github login (username)
+        # g.logger.info(session['user_id'])
+        # query returns a tuple
+        # user = db.query(Profiles).filter_by(username='developerfitz').first()
+        # user = db.query(Profiles).all()
+        # g.logger.info('after query')
+        # g.logger.info(user)
+        # try: 
+        #     db.query(Profiles.username).filter_by(username=session[user_id])
+        # except e:
+        #     print(e)
+     	#     abort(403)
+        #  ? not sure if this is the proper test to ensure app doesn't break
+        if not g.user: 
      	    abort(403)
+        # g.user = user
+        # db.close()
 
         return func(*args, **kwargs)
     return decorator

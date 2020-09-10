@@ -29,31 +29,21 @@ class Profiles(Base):
             >
             '''
 
+# Images class Not currently being used
+# class Images(Base):
+#   __tablename__ = 'images'
+#   image_id = Column(Integer, primary_key=True)
+#   user_number = Column(Integer, ForeignKey('user_profiles.user_number'))
+#   bucket = Column(String) 
+#   key = Column(String) 
+#   thumbnail_key = Column(String)
 
-class Images(Base):
-  __tablename__ = 'images'
-  image_id = Column(Integer, primary_key=True)
-  user_number = Column(Integer, ForeignKey('user_profiles.user_number'))
-  bucket = Column(String) 
-  key = Column(String) 
-  thumbnail_key = Column(String)
-
-  def __repr__(self):
-    return f'''
-            Images <
-              user_number={self.user_number}, 
-              bucket={self.bucket},
-              key={self.key}, 
-              thumbnail_key={self.thumbnail_key}
-            >
-            '''
-
-
-
-# class UserGitHubProfile(Base):
-#   __tablename__ = 'github_profiles'
-#   id = ''
-#   login = '' # username
-#   avatar_url = ''
-#   email = ''
-#   access_token = ''
+#   def __repr__(self):
+#     return f'''
+#             Images <
+#               user_number={self.user_number}, 
+#               bucket={self.bucket},
+#               key={self.key}, 
+#               thumbnail_key={self.thumbnail_key}
+#             >
+#             '''

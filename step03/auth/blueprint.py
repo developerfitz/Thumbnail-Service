@@ -1,10 +1,11 @@
-from flask import Blueprint, session, redirect, url_for, request, g, current_app, abort, render_template
 import requests
+from flask import Blueprint, session, redirect, url_for, request, g, current_app, abort, render_template
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from .utils import get_authorization, get_authorization_link, get_user_profile, set_global_user_profile, GithubClient, registered_user
 import os, binascii
 from models import Profiles
+from db import get_user_profile, set_global_user_profile, registered_user
+from .utils import get_authorization, get_authorization_link, GithubClient 
 
 
 auth = Blueprint('auth', __name__)

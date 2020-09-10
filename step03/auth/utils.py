@@ -3,12 +3,12 @@ from flask import abort, session, g
 import requests
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from models import Profiles
+from db import get_user_profile, set_global_user_profile
 
 
 def require_authentication(func):
     @wraps(func)
     def decorator(*args, **kwargs):
-        g.logger.info('in require auth')
         if 'github_id' not in session:
             abort(403)
 
@@ -48,64 +48,6 @@ def get_authorization(client_id, client_secret, code):
 
     return r.json()
 
-
-def registered_user(github_id):
-    try:
-        db = g.Session()
-        registered = db.query(Profiles.is_registered).filter(
-            Profiles.github_id == github_id
-            ).one()
-        db.close()
-    except NoResultFound as e:
-        g.logger.info('User not registered')
-        g.logger.error(e)
-        return False
-    return registered[0]
-
-
-def create_new_user(user):
-    new_user = Profiles(
-        username=user['username'], 
-        email=user['email'], 
-        avatar_url=user['avatar_url'], 
-        github_id=user['github_id'] #github profile as ('id')
-    )
-    return new_user
-
-
-def add_user_to_db(new_user):
-    db = g.Session()
-    db.add(new_user)
-    db.commit()
-    db.close()
-
-def update_user_db_profile(github_id, update_object):
-    db = g.Session()
-    db.query(Profiles).filter(
-        Profiles.github_id == github_id
-        ).update(update_object)
-    db.commit()
-    db.close()
-
-def get_user_profile(github_id):
-    db = g.Session()
-    user_profile = db.query(Profiles).filter(
-        Profiles.github_id == github_id
-        ).one()
-    profile = {
-        'username': user_profile.username,
-        'github_id': user_profile.github_id,
-        'avatar_url': user_profile.avatar_url,
-        'email': user_profile.email,
-        'is_registered': user_profile.is_registered,
-        '_id': user_profile.user_number
-    }
-    db.close()
-    return profile
-
-
-def set_global_user_profile(profile):
-    g.profile = profile
 
 class GithubClient:
     '''

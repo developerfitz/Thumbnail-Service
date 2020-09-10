@@ -6,10 +6,9 @@ import os
 from dotenv import load_dotenv
 from functools import wraps
 from auth import auth, require_authentication
-from auth.utils import create_new_user, add_user_to_db, update_user_db_profile, get_user_profile
-from db import Session
+from db import create_new_user, add_user_to_db, update_user_db_profile, get_user_profile
+# from db import Session
 from models import Profiles
-# import db
 import werkzeug
 
 app = Flask(__name__)
@@ -38,19 +37,15 @@ app.config.update(
 
 @app.before_request
 def set_db_context():
-    # ? Why are there two contexts being set?
-    flask.g.Session = Session
+    # flask.g.Session = Session
     flask.g.logger = app.logger
 
 @app.before_request
 def set_user_context():
-    flask.g.logger.info('setting user context')
-    # context set if new user (e.g., github_profile and github_id set)
+    # context set if new user (e.g., github_profile and github_id)
     if 'github_profile' in flask.session and 'github_id' in flask.session:
-        # ! flask.g possibly gets reset after every request?
         flask.g.github_id = flask.session['github_id']
         flask.g.github_profile = flask.session['github_profile']
-        flask.g.logger.info('user context set')
 
 
 @app.route('/profile')
@@ -95,7 +90,7 @@ def create_account():
 
     github_id = flask.session['github_id']
 
-    # create new user profile from github_profile
+    # create new user profile in DB from github_profile
     created_user = create_new_user(g.github_profile)
     add_user_to_db(created_user)
 

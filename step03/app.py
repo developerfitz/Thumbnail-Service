@@ -6,7 +6,8 @@ import os
 from dotenv import load_dotenv
 from functools import wraps
 from auth import auth, require_authentication
-from db import FakeDatabase, Session
+from auth.utils import create_new_user, add_user_to_db, update_user_db_profile, get_user_profile
+from db import Session
 from models import Profiles
 # import db
 import werkzeug
@@ -34,49 +35,32 @@ app.config.update(
     GITHUB_CLIENT_SECRET=GITHUB_CLIENT_SECRET,
 )
 
-db = FakeDatabase()
 
 @app.before_request
 def set_db_context():
-    # flask.g.db = db
+    # ? Why are there two contexts being set?
     flask.g.Session = Session
     flask.g.logger = app.logger
 
 @app.before_request
 def set_user_context():
-    if 'user_id' in flask.session:
-        # TODO: access db to get user and set to global
-        # flask.g.user = flask.g.db.get_user(flask.session['user_id'])
-        # db = flask.g.Session()
-        # db.
-        flask.g.user = flask.session['user_id']
-
-
+    flask.g.logger.info('setting user context')
+    # context set if new user (e.g., github_profile and github_id set)
+    if 'github_profile' in flask.session and 'github_id' in flask.session:
+        # ! flask.g possibly gets reset after every request?
+        flask.g.github_id = flask.session['github_id']
+        flask.g.github_profile = flask.session['github_profile']
+        flask.g.logger.info('user context set')
 
 
 @app.route('/profile')
 @require_authentication
 def get_profile():
-    # TODO: access db to get user and
-    # user = flask.g.db.get_user(flask.session['user_id'])
-    # db = g.Session()
-    # db.query()
-    db = flask.g.Session()
-    user = db.query(Profiles).filter(Profiles.username == flask.session['user_id']).first()
-    flask.g.logger.info('route /profile')
-    flask.g.logger.info(user)
-    flask.g.profile = {
-        'username': user.username,
-        'avatar_url': user.avatar_url
-    }
-    flask.g.logger.info(user)
-    # print(user)
+    # user g.profile set when checked in require_auth
     return render_template(
         'profile.html',
-        # profile_image_url=user['avatar_url'],
-        # username=user['username']
-        profile_image_url=user.avatar_url,
-        username=user.username
+        profile_image_url=flask.g.profile['avatar_url'],
+        username=flask.g.profile['username']
     )
 
 @app.errorhandler(werkzeug.exceptions.Forbidden)
@@ -89,43 +73,14 @@ def signup():
     if 'github_id' not in flask.session:
         return render_template('signup.html')
 
-    # github_profile = flask.g.db.get_github_profile(flask.session['github_id'])
-    '''
-         # TODO: tried to login with kaesaru but go into an endless loop
-         # ? possibly due to this section and not being able to create
-         # ? an account or something like that? not sure, feel here is the
-         # ? issue
-    ''' 
-    # if not github_profile:
-        # return render_template('signup.html')
-
     g.logger.info('route /signup')
-    # cc_cookie = query.filter(Cookie.cookie_name == "chocolate chip").first() 2
-    # cc_cookie.quantity = cc_cookie.quantity + 120
-    # session.commit()
-    db = g.Session()
-    # query = db.query(Profiles.username, Profiles.email).filter_by(github_id=flask.session['github_id']).first()
-    # TODO: make sure it is the only one when updating db
-    query = db.query(Profiles).filter(Profiles.github_id == flask.session['github_id']).first()
-    g.logger.info(query)
-    g.logger.info(flask.session)
-    username = query.username
-    email = query.email
-    # ? if github_id not found in DB user doesn't have an account 
-    # ? redirect to signup page 
-    # if flask.session['github_id'] not in query:
-    if query == None:
+
+    if 'github_profile' not in g:
         return render_template('signup.html')
-    # print(github_profile)
-    g.logger.info('before create-account.html')
-    # ? registering the user here, does not seem like a good place tho
-    query.is_registered = True
-    flask.g.user = query
-    g.logger.info(query)
-    g.logger.info(query.username)
-    g.logger.info(query.is_registered)
-    db.commit()
-    db.close()
+
+    username = g.github_profile['username']  
+    email = g.github_profile['email']  
+
     return render_template(
         'create-account.html',
         github_username=username or '',
@@ -139,31 +94,21 @@ def create_account():
         return render_template('signup.html')
 
     github_id = flask.session['github_id']
-    # TODO: get github profile from db and
-    # github_profile = flask.g.db.get_github_profile(github_id)
-    db = g.Session()
-    user_profile = db.query(Profiles).filter(Profiles.github_id == flask.session['github_id']).first()
-    g.logger.info(user_profile)
 
-    # register user, replaces creating a user
-    username = flask.request.form['username']
-    email = flask.request.form['email']
-    avatar_url = user_profile.avatar_url
-    
-    user_profile.is_registered = True
-    g.logger.info(user_profile)
-    # user = Profiles(username=username, email=email, 
-            #  avatar_url=avatar_url, github_id=github_id)
-    # flask.session['user_id'] = user.username
-    # flask.g.db.create_user(username, email, avatar_url, github_id=github_id)
-    flask.session['user_id'] = user_profile.username
-    # ? g.profile is not holding up think i'm missing something here
-    # flask.g.profile = {
-    #     'username': user_profile.username,
-    #     'avatar_url':user_profile.avatar_url
-    # }
+    # create new user profile from github_profile
+    created_user = create_new_user(g.github_profile)
+    add_user_to_db(created_user)
+
+    values_to_update = {
+        'username': flask.request.form['username'],
+        'email': flask.request.form['email'],
+        'is_registered': True
+    }
+
+    update_user_db_profile(github_id, values_to_update)
 
     return redirect(url_for('get_profile'))
+
 
 @app.route('/')
 def login():

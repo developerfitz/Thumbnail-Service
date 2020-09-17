@@ -10,6 +10,7 @@ from pathlib import PurePath
 from urllib.parse import unquote_plus
 from PIL import Image
 
+REGION = 'us-east-1'
 BUCKET_NAME = 'gg-photo-bucket'
 OUTPUT_FOLDER = 'thumbnails'
 
@@ -17,7 +18,7 @@ OUTPUT_FOLDER = 'thumbnails'
 application = flask.Flask(__name__)
 application.logger.setLevel(logging.INFO)
 
-session = boto3.Session(region_name='us-east-1')
+session = boto3.Session(region_name=REGION)
 s3 = session.client('s3')
 
 

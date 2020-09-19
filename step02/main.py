@@ -12,9 +12,10 @@ from SQSQueue import SQSQueue, SQSMessage
 BUCKET_NAME = 'gg-photo-bucket'
 OUTPUT_FOLDER = 'thumbnails'
 QUEUE_URL = 'https://queue.amazonaws.com/<AWS#>/thumbnail-uploads'
+AWS_PROFILE = 'thumbnail-service'
 
 # Clients + Sessions
-session = boto3.Session(profile_name='thumbnail-service')
+session = boto3.Session(profile_name=AWS_PROFILE)
 s3 = session.client('s3')
 sqs = session.client('sqs')
 

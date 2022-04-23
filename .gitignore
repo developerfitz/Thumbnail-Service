@@ -5,7 +5,7 @@ Development_Roadmap.iml
 *.db
 
 test.py
-
+venv/
 
 # ignore all challenge dirs (steps) except current
 step*/
